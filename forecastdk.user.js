@@ -3,13 +3,8 @@
 // @namespace    https://github.com/dannykayburn/eam_wo_forecast_tool/
 // @version      14.6.10
 // @description  Quality of life and automation tool that uses native EAM ExtJS Framework functions for high reliability and capability.
-// @author       DK
+// @author       Jacob Rosendahl
 // @match        https://*.eam.hxgnsmartcloud.com/*
-// @match        https://*.sso.eam.hxgnsmartcloud.com/*
-// @match        https://idp.federate.sso.com/*
-// @match        https://*.ptp.sso.dev/*
-// @match        https://*.insights.sso.dev/*
-// @match        https://*.apm-es.gps.sso.dev/*
 // @match        https://*.hexagon.com/*
 // @match        https://*.octave.com/*
 // @updateURL    https://raw.githubusercontent.com/dannykayburn/eam_wo_forecast_tool/main/forecastdk.user.js
@@ -35,24 +30,25 @@
 // ============================================================
 const APM_CONFIG = {
 
+  // 'STD'    — Standard EAM username/password authentication.
+  // 'EXTERN' — Federated/SSO (SAML, Okta, etc.) — fills IDP_HOST and INTERNAL_DOMAINS below.
   LGNEAM: 'STD',
 
   TENANT: 'ITSGDENA090_PP1',
 
+  // Subdomain prefix of your EAM URL (e.g. us1, us2, eu1, ap1)
   EAM_REGION: 'us102',
 
-  // Not used in STD mode — leave empty
+  // Only used when LGNEAM = 'EXTERN'. Leave empty for STD.
   IDP_HOST: '',
 
-  // Not used in STD mode — leave empty
+  // Only used when LGNEAM = 'EXTERN'. Leave as [] for STD.
   INTERNAL_DOMAINS: [],
 
   WO_SCREEN_FUNC: 'WSJOBS',
 
-  // !! UPDATE THIS to match your actual WO number format !!
-  // Examples:
-  //   Standard alphanumeric:  /\b([A-Z]{2}-\d{5,})\b/
-  //   Pure numeric (6+ dig):  /\b(\d{6,})\b/
+  // Regex matching your WO number format. Update to suit your tenant.
+  // Examples:  /\b(\d{6,})\b/   or   /\b([A-Z]{2}-\d{5,})\b/
   WO_PATTERN: /\b(\d{6,})\b/,
 
   UPDATE_URL: 'https://raw.githubusercontent.com/dannykayburn/eam_wo_forecast_tool/main/forecastdk.user.js',
@@ -62,36 +58,21 @@ const APM_CONFIG = {
 // END OF CONFIGURATION — Do not edit below this line
 // ============================================================
 
-// Derived constants — computed from APM_CONFIG, used by the rest of the script.
+// Derived constants computed from APM_CONFIG — used throughout the script.
 const _CFG = (() => {
-  const isSTD   = APM_CONFIG.LGNEAM === 'STD';
+  const isSTD    = APM_CONFIG.LGNEAM === 'STD';
   const isEXTERN = APM_CONFIG.LGNEAM === 'EXTERN';
-  const eamBase = `${APM_CONFIG.EAM_REGION}.eam.hxgnsmartcloud.com`;
-
+  const eamBase  = `${APM_CONFIG.EAM_REGION}.eam.hxgnsmartcloud.com`;
   return Object.freeze({
-    isSTD,
-    isEXTERN,
-
-    // Tenant and host
-    tenant:           APM_CONFIG.TENANT,
+    isSTD, isEXTERN,
+    tenant:            APM_CONFIG.TENANT,
     eamBase,
-
-    // Session timeout redirect — works for both auth modes.
-    // In STD mode this goes to the standard login form, not an SSO endpoint.
     sessionTimeoutUrl: `https://${eamBase}/web/base/logindisp?tenant=${APM_CONFIG.TENANT}`,
-
-    // IDP hostname — null in STD mode so callers can guard with a simple if check.
-    idpHost:          isSTD ? null : (APM_CONFIG.IDP_HOST || null),
-
-    // Internal companion domains — empty in STD mode.
-    internalDomains:  isSTD ? [] : (APM_CONFIG.INTERNAL_DOMAINS || []),
-
-    // Work order config
-    woScreenFunc:     APM_CONFIG.WO_SCREEN_FUNC,
-    woPattern:        APM_CONFIG.WO_PATTERN,
-
-    // Update URL
-    updateUrl:        APM_CONFIG.UPDATE_URL,
+    idpHost:           isSTD ? null : (APM_CONFIG.IDP_HOST || null),
+    internalDomains:   isSTD ? [] : (APM_CONFIG.INTERNAL_DOMAINS || []),
+    woScreenFunc:      APM_CONFIG.WO_SCREEN_FUNC,
+    woPattern:         APM_CONFIG.WO_PATTERN,
+    updateUrl:         APM_CONFIG.UPDATE_URL,
   });
 })();
 
@@ -112,88 +93,62 @@ if (typeof GM_getValue !== 'undefined' && GM_getValue('apm_theme_hint') === 'dar
   // SSO/IDP detection is now gated on _CFG.isEXTERN.
   // In STD mode, isIDP, isSSO, isSAML, isEAMAuth, and isPTP (internal domains) all
   // resolve to false, so isTransition and shouldSkipBoot never fire for auth reasons.
-  var mainWin, hostname, url, AppContext, FLAGS;
+var mainWin, hostname, url, AppContext, FLAGS;
   var init_context = __esm({
     "src/core/context.js"() {
       mainWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
       hostname = mainWin.location.hostname.toLowerCase();
-      url     = mainWin.location.href.toLowerCase();
-
-      // Helper: check if the current hostname matches any of the configured
-      // internal companion domains (only populated in EXTERN mode).
+      url = mainWin.location.href.toLowerCase();
       const isInternalDomain = _CFG.internalDomains.some(d => hostname.endsWith(d));
-
       AppContext = Object.freeze({
         hostname,
-
-        // Core Domains
         isEAM: hostname.includes("hxgnsmartcloud.com"),
-
-        // PTP / internal companion apps — only meaningful in EXTERN mode.
-        // In STD mode this is always false because internalDomains is empty.
         isPTP: isInternalDomain || /insights\.hxgnsmartcloud\.com/i.test(hostname),
-
         isLanding: hostname.includes("octave.com") || hostname.includes("hexagon.com"),
-        isShell:   url.includes("/base/common"),
-
-        // Auth / Transition Domains
-        // In STD mode all three are always false — the user never visits these pages.
+        isShell: url.includes("/base/common"),
         isIDP:    _CFG.isEXTERN && _CFG.idpHost ? hostname.includes(_CFG.idpHost) : false,
         isSSO:    _CFG.isEXTERN ? hostname.includes("sso.") : false,
         isSAML:   _CFG.isEXTERN ? url.includes("saml") : false,
-
         get isSubmit() {
           return document.title === "Submit Form";
         },
-
-        // EAMAuth: SSO handshake paths within hxgnsmartcloud — only in EXTERN mode.
         isEAMAuth: _CFG.isEXTERN &&
           hostname.includes("hxgnsmartcloud.com") &&
           (url.includes("/sso/") || url.includes("/sp/") || url.includes("ssoservlet")),
-
-        // Frame Context (unchanged — EAM screen cache behaviour is auth-mode agnostic)
-        isTop: window === window.top || (function() {
+        isTop: window === window.top || (function () {
           try {
-            return window.parent === window.top &&
-              !url.includes("/base/common") &&
-              !url.includes("/base/loadmain");
-          } catch(e) { return false; }
+            return window.parent === window.top && !url.includes("/base/common") && !url.includes("/base/loadmain");
+          } catch (e) {
+            return false;
+          }
         })(),
-
-        // Logic Aggregates
         get shouldInitUI() {
           return this.isEAM || this.isPTP;
         },
         get isTransition() {
-          // In STD mode: isIDP, isSAML, isSSO are all false, so this is never true
-          // for auth reasons. isSubmit can still fire if EAM uses a submit form
-          // for non-SSO purposes, but that is harmless — the script just waits.
           return this.isIDP || this.isSubmit || (this.isSSO || this.isSAML) && !this.isEAM && !this.isPTP;
         },
         get shouldSkipBoot() {
-          // In STD mode: isIDP and isSSO are false, so boot is only skipped on
-          // landing pages (octave.com / hexagon.com), which is still correct.
           return this.isLanding || this.isIDP || this.isSSO;
         }
       });
-
       FLAGS = Object.freeze({
-        CORE_INIT:          "__apm_core_initialized",
-        BOOT_EXTJS:         "__apm_boot_extjs_ready",
-        AJAX_HOOK:          "__apm_ajax_hooked",
-        STORAGE_PATCH:      "__apm_storage_patched",
-        THEME_UNLOAD:       "__apm_theme_unload_bound",
-        THEME_MSG:          "__apm_theme_msg_bound",
-        CONSISTENCY_BOUND:  "__apm_consistency_bound",
-        GRID_HOOK:          "__apm_grid_hooked",
-        TAB_CAPTURED:       "__apm_tab_defaults_captured",
-        FORECAST_TOGGLE:    "__apm_forecast_toggle_bound",
-        HOTKEYS_BOUND:      "__apm_hotkeys_bound",
-        MIGRATION_RAN:      "__apm_migration_ran",
-        SESSION_XHR_HOOK:   "__apm_session_xhr_hooked",
+        CORE_INIT: "__apm_core_initialized",
+        BOOT_EXTJS: "__apm_boot_extjs_ready",
+        AJAX_HOOK: "__apm_ajax_hooked",
+        STORAGE_PATCH: "__apm_storage_patched",
+        THEME_UNLOAD: "__apm_theme_unload_bound",
+        THEME_MSG: "__apm_theme_msg_bound",
+        CONSISTENCY_BOUND: "__apm_consistency_bound",
+        GRID_HOOK: "__apm_grid_hooked",
+        TAB_CAPTURED: "__apm_tab_defaults_captured",
+        FORECAST_TOGGLE: "__apm_forecast_toggle_bound",
+        HOTKEYS_BOUND: "__apm_hotkeys_bound",
+        MIGRATION_RAN: "__apm_migration_ran",
+        SESSION_XHR_HOOK: "__apm_session_xhr_hooked",
         SESSION_FETCH_HOOK: "__apm_session_fetch_hooked",
-        UPDATE_CHECKED:     "__apm_update_checked",
-        MIGRATION_RETRY:    "__apm_migration_retry"
+        UPDATE_CHECKED: "__apm_update_checked",
+        MIGRATION_RETRY: "__apm_migration_retry"
       });
     }
   });
