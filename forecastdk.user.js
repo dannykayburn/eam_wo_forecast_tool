@@ -86,8 +86,15 @@ if (typeof GM_getValue !== 'undefined' && GM_getValue('apm_theme_hint') === 'dar
 }
 
 (() => {
-  // ... (all existing bundler scaffolding — __defProp, __getOwnPropNames, __esm, __export)
-  // ... UNCHANGED
+var __defProp = Object.defineProperty;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
 
   // src/core/context.js — MODIFIED
   // SSO/IDP detection is now gated on _CFG.isEXTERN.
