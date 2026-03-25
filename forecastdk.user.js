@@ -8076,7 +8076,7 @@ var mainWin, hostname, url, AppContext, FLAGS;
 #apm-v-changelog { transition: color 0.15s, filter 0.15s; }
 #apm-v-changelog:hover { filter: brightness(1.2); }
 
-.apm-qs-container { position: fixed; top: 3px; left: 110px; z-index: 20; display: flex; align-items: center; gap: 8px; background: transparent; padding: 0 10px; height: 42px; }
+.apm-qs-container { position: fixed; top: 3px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px; background: transparent; padding: 0 10px; height: 42px; }
 .apm-qs-label { color: var(--apm-text-secondary); font-family: var(--apm-font); font-weight: bold; font-size: 13px; cursor: default; user-select: none; margin-right: 2px; }
 .apm-qs-input { width: 140px; font-family: var(--apm-font-mono); font-weight: bold; height: 24px; padding: 0 6px; box-sizing: border-box; outline: none; background: rgba(255,255,255,0.9); color: var(--apm-input-text); border: 1px solid rgba(255,255,255,0.3); border-radius: 3px; }
 .apm-qs-input:focus { border-color: var(--apm-accent); box-shadow: 0 0 0 2px var(--apm-input-focus); }
