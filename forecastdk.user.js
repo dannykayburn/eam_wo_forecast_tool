@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         APM Master: Unified Tools
-// @namespace    https://github.com/jaker788-create/APM-Master/
+// @namespace    https://github.com/dannykayburn/eam_wo_forecast_tool/
 // @version      14.6.10
 // @description  Quality of life and automation tool that uses native EAM ExtJS Framework functions for high reliability and capability.
-// @author       Jacob Rosendahl
+// @author       DK
 // @match        https://*.eam.hxgnsmartcloud.com/*
 // @match        https://*.sso.eam.hxgnsmartcloud.com/*
 // @match        https://idp.federate.sso.com/*
@@ -12,8 +12,8 @@
 // @match        https://*.apm-es.gps.sso.dev/*
 // @match        https://*.hexagon.com/*
 // @match        https://*.octave.com/*
-// @updateURL    https://raw.githubusercontent.com/jaker788-create/APM-Master/main/forecast.user.js
-// @downloadURL  https://raw.githubusercontent.com/jaker788-create/APM-Master/main/forecast.user.js
+// @updateURL    https://raw.githubusercontent.com/dannykayburn/eam_wo_forecast_tool/main/forecastdk.user.js
+// @downloadURL  https://raw.githubusercontent.com/dannykayburn/eam_wo_forecast_tool/main/forecastdk.user.js
 // @run-at       document-start
 // @grant        GM_addStyle
 // @grant        GM_addElement
@@ -35,52 +35,27 @@
 // ============================================================
 const APM_CONFIG = {
 
-  // Login mode:
-  //   'EXTERN' — Federated/SSO authentication (e.g. SAML, Amazon IDP, Okta).
-  //              SSO context detection and IDP page handling are active.
-  //   'STD'    — Standard EAM username/password authentication.
-  //              SSO/IDP logic is bypassed entirely. Simpler and safer for
-  //              organizations not using a federated identity provider.
   LGNEAM: 'STD',
 
-  // Your EAM tenant identifier as it appears in the login URL.
-  // Example: 'CITYOFCALGARY_PRD', 'ACME_TST'
   TENANT: 'ITSGDENA090_PP1',
 
-  // EAM regional subdomain prefix (the part before .eam.hxgnsmartcloud.com).
-  // Check your EAM URL: if you log in at https://us1.eam.hxgnsmartcloud.com, use 'us1'.
-  // Common values: 'us1', 'us2', 'eu1', 'eu2', 'ap1'
   EAM_REGION: 'us102',
 
-  // Only used when LGNEAM = 'EXTERN'.
-  // The hostname of your identity provider (without https://).
-  // Amazon example: 'idp.federate.amazon.com'
-  // Okta example:   'yourorg.okta.com'
-  // Leave empty ('') if LGNEAM = 'STD'.
-  IDP_HOST: 'idp.federate.sso.com',
+  // Not used in STD mode — leave empty
+  IDP_HOST: '',
 
-  // Only used when LGNEAM = 'EXTERN'.
-  // Additional internal tool domains the script should activate on beyond EAM itself.
-  // These are organization-specific companion apps (timers, dashboards, etc.).
-  // Leave as an empty array ([]) if none, or if LGNEAM = 'STD'.
-  INTERNAL_DOMAINS: [
-    'ptp.sso.dev',
-    'insights.sso.dev',
-    'apm-es.gps.sso.dev',
-  ],
+  // Not used in STD mode — leave empty
+  INTERNAL_DOMAINS: [],
 
-  // The EAM screen function code for Work Orders in your instance.
-  // This is almost always 'WSJOBS' but can vary by configuration.
   WO_SCREEN_FUNC: 'WSJOBS',
 
-  // Regex to match work order numbers in your organization's format.
-  // Amazon uses 10+ digit numbers starting with 1, 2, or 3.
-  // A simpler alternative for standard EAM: /\bWO-\d+\b/ or /\b\d{6,}\b/
-  WO_PATTERN: /\b([123]\d{9,})\b/,
+  // !! UPDATE THIS to match your actual WO number format !!
+  // Examples:
+  //   Standard alphanumeric:  /\b([A-Z]{2}-\d{5,})\b/
+  //   Pure numeric (6+ dig):  /\b(\d{6,})\b/
+  WO_PATTERN: /\b(\d{6,})\b/,
 
-  // URL where the script fetches updates. Point to your own fork or distribution
-  // location if you are maintaining a custom build.
-  //UPDATE_URL: 'https://raw.githubusercontent.com/jaker788-create/APM-Master/main/forecast.user.js',
+  UPDATE_URL: 'https://raw.githubusercontent.com/dannykayburn/eam_wo_forecast_tool/main/forecastdk.user.js',
 
 };
 // ============================================================
